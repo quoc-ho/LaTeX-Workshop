@@ -2858,9 +2858,9 @@ const PDFViewerApplication = {
         if (!this.isViewerEmbedded) {
           pdfViewer.focus();
         }
-        await Promise.race([pagesPromise, new Promise(resolve => {
-          setTimeout(resolve, FORCE_PAGES_LOADED_TIMEOUT);
-        })]);
+        // await Promise.race([pagesPromise, new Promise(resolve => {
+        //   setTimeout(resolve, FORCE_PAGES_LOADED_TIMEOUT);
+        // })]);
         if (!initialBookmark && !hash) {
           return;
         }
@@ -8707,11 +8707,11 @@ class PDFPageView {
         this.div.classList.remove("loading");
         break;
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.RUNNING:
-        this.div.classList.add("loadingIcon");
-        this.#loadingId = setTimeout(() => {
-          this.div.classList.add("loading");
-          this.#loadingId = null;
-        }, 0);
+        // this.div.classList.add("loadingIcon");
+        // this.#loadingId = setTimeout(() => {
+        //   this.div.classList.add("loading");
+        //   this.#loadingId = null;
+        // }, 0);
         break;
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.INITIAL:
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.FINISHED:
@@ -9168,7 +9168,7 @@ class PDFPageView {
       throw error;
     }
   }
-  async draw() {
+  async draw(oldPageCanvas = null) {
     if (this.renderingState !== _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.INITIAL) {
       console.error("Must be in new state before drawing");
       this.reset();
@@ -9188,7 +9188,7 @@ class PDFPageView {
     const canvasWrapper = document.createElement("div");
     canvasWrapper.classList.add("canvasWrapper");
     canvasWrapper.setAttribute("aria-hidden", true);
-    this.#addLayer(canvasWrapper, "canvasWrapper");
+    // this.#addLayer(canvasWrapper, "canvasWrapper");
     if (!this.textLayer && this.#textLayerMode !== _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.TextLayerMode.DISABLE && !pdfPage.isPureXfa) {
       this._accessibilityManager ||= new _text_accessibility_js__WEBPACK_IMPORTED_MODULE_9__.TextAccessibilityManager();
       this.textLayer = new _text_layer_builder_js__WEBPACK_IMPORTED_MODULE_10__.TextLayerBuilder({
@@ -9301,7 +9301,20 @@ class PDFPageView {
     };
     const renderTask = this.renderTask = this.pdfPage.render(renderContext);
     renderTask.onContinue = renderContinueCallback;
+    let layerAdded = false;
+    if (oldPageCanvas !== null) {
+      this.#addLayer(canvasWrapper, "canvasWrapper");
+      canvas.width = oldPageCanvas.width;
+      canvas.height = oldPageCanvas.height;
+      style.width = oldPageCanvas.style.width;
+      style.height = oldPageCanvas.style.height;
+      ctx.drawImage(oldPageCanvas, 0, 0);
+      layerAdded = true;
+      canvas.hidden = false;
+    }
     const resultPromise = renderTask.promise.then(async () => {
+      if (!layerAdded)
+        this.#addLayer(canvasWrapper, "canvasWrapper");
       showCanvas?.(true);
       await this.#finishRenderTask(renderTask);
       this.#renderTextLayer();
@@ -10072,7 +10085,7 @@ class PDFRenderingQueue {
   isViewFinished(view) {
     return view.renderingState === _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.FINISHED;
   }
-  renderView(view) {
+  renderView(view, oldPageCanvas = null) {
     switch (view.renderingState) {
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.FINISHED:
         return false;
@@ -10085,7 +10098,7 @@ class PDFRenderingQueue {
         break;
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.INITIAL:
         this.highestPriorityPage = view.renderingId;
-        view.draw().finally(() => {
+        view.draw(oldPageCanvas).finally(() => {
           this.renderHighestPriority();
         }).catch(reason => {
           if (reason instanceof pdfjs_lib__WEBPACK_IMPORTED_MODULE_0__.RenderingCancelledException) {
@@ -11703,7 +11716,7 @@ class PDFViewer {
       };
       document.addEventListener("visibilitychange", this.#onVisibilityChange);
     });
-    await Promise.race([this._onePageRenderedCapability.promise, visibilityChangePromise]);
+    // await Promise.race([this._onePageRenderedCapability.promise, visibilityChangePromise]);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     this.#onVisibilityChange = null;
   }
@@ -11765,10 +11778,13 @@ class PDFViewer {
     }
   }
   setDocument(pdfDocument) {
+    let oldCurrentPage = this.currentPageNumber;
+    let oldPageCanvas = null;
     if (this.pdfDocument) {
       this.eventBus.dispatch("pagesdestroy", {
         source: this
       });
+      oldPageCanvas = this._pages[oldCurrentPage - 1].canvas;
       this._cancelRendering();
       this._resetView();
       this.findController?.setDocument(null);
@@ -11783,7 +11799,10 @@ class PDFViewer {
       return;
     }
     const pagesCount = pdfDocument.numPages;
+    const oldPageNum = this.viewer.children.length;
+    oldCurrentPage = (oldCurrentPage > pagesCount) ? this._currentPageNumber : oldCurrentPage;
     const firstPagePromise = pdfDocument.getPage(1);
+    const currentPagePromise = pdfDocument.getPage(oldCurrentPage);
     const optionalContentConfigPromise = pdfDocument.getOptionalContentConfig({
       intent: "display"
     });
@@ -11821,7 +11840,7 @@ class PDFViewer {
       this._onAfterDraw = null;
     };
     this.eventBus._on("pagerendered", this._onAfterDraw);
-    Promise.all([firstPagePromise, permissionsPromise]).then(([firstPdfPage, permissions]) => {
+    Promise.all([firstPagePromise, currentPagePromise, permissionsPromise]).then(([firstPdfPage, currentPage, permissions]) => {
       if (pdfDocument !== this.pdfDocument) {
         return;
       }
@@ -11884,6 +11903,10 @@ class PDFViewer {
         this._pages.push(pageView);
       }
       this._pages[0]?.setPdfPage(firstPdfPage);
+      this._pages[oldCurrentPage-1]?.setPdfPage(currentPage);
+      this.renderingQueue.renderView(this._pages[oldCurrentPage-1], oldPageCanvas);
+      for (let i = 1; i <= oldPageNum; i++)
+        this.viewer.removeChild(this.viewer.firstChild);
       if (this._scrollMode === _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.ScrollMode.PAGE) {
         this.#ensurePageViewVisible();
       } else if (this._spreadMode !== _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.SpreadMode.NONE) {
@@ -12001,7 +12024,7 @@ class PDFViewer {
       document.removeEventListener("visibilitychange", this.#onVisibilityChange);
       this.#onVisibilityChange = null;
     }
-    this.viewer.textContent = "";
+    // this.viewer.textContent = "";
     this._updateScrollMode();
     this.viewer.removeAttribute("lang");
     if (this.#hiddenCopyElement) {
