@@ -2858,9 +2858,9 @@ const PDFViewerApplication = {
         if (!this.isViewerEmbedded) {
           pdfViewer.focus();
         }
-        // await Promise.race([pagesPromise, new Promise(resolve => {
-        //   setTimeout(resolve, FORCE_PAGES_LOADED_TIMEOUT);
-        // })]);
+        await Promise.race([pagesPromise, new Promise(resolve => {
+          setTimeout(resolve, FORCE_PAGES_LOADED_TIMEOUT);
+        })]);
         if (!initialBookmark && !hash) {
           return;
         }
@@ -8707,11 +8707,11 @@ class PDFPageView {
         this.div.classList.remove("loading");
         break;
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.RUNNING:
-        // this.div.classList.add("loadingIcon");
-        // this.#loadingId = setTimeout(() => {
-        //   this.div.classList.add("loading");
-        //   this.#loadingId = null;
-        // }, 0);
+        this.div.classList.add("loadingIcon");
+        this.#loadingId = setTimeout(() => {
+          this.div.classList.add("loading");
+          this.#loadingId = null;
+        }, 0);
         break;
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.INITIAL:
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.FINISHED:
@@ -10085,7 +10085,7 @@ class PDFRenderingQueue {
   isViewFinished(view) {
     return view.renderingState === _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.FINISHED;
   }
-  renderView(view, oldPageCanvas = null) {
+  renderView(view) {
     switch (view.renderingState) {
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.FINISHED:
         return false;
@@ -10098,7 +10098,7 @@ class PDFRenderingQueue {
         break;
       case _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.RenderingStates.INITIAL:
         this.highestPriorityPage = view.renderingId;
-        view.draw(oldPageCanvas).finally(() => {
+        view.draw().finally(() => {
           this.renderHighestPriority();
         }).catch(reason => {
           if (reason instanceof pdfjs_lib__WEBPACK_IMPORTED_MODULE_0__.RenderingCancelledException) {
@@ -11716,7 +11716,7 @@ class PDFViewer {
       };
       document.addEventListener("visibilitychange", this.#onVisibilityChange);
     });
-    // await Promise.race([this._onePageRenderedCapability.promise, visibilityChangePromise]);
+    await Promise.race([this._onePageRenderedCapability.promise, visibilityChangePromise]);
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
     this.#onVisibilityChange = null;
   }
@@ -11778,13 +11778,12 @@ class PDFViewer {
     }
   }
   setDocument(pdfDocument) {
-    let oldCurrentPage = this.currentPageNumber;
-    let oldPageCanvas = null;
+    let oldCanvasArr = this._getVisiblePages().views.map(v => [v.id, v.view.canvas]); // save visible canvases into an array of arrays [[pageNum, canvas], ...]
+    const oldPageCount = this.viewer.children.length;
     if (this.pdfDocument) {
       this.eventBus.dispatch("pagesdestroy", {
         source: this
       });
-      oldPageCanvas = this._pages[oldCurrentPage - 1].canvas;
       this._cancelRendering();
       this._resetView();
       this.findController?.setDocument(null);
@@ -11799,10 +11798,7 @@ class PDFViewer {
       return;
     }
     const pagesCount = pdfDocument.numPages;
-    const oldPageNum = this.viewer.children.length;
-    oldCurrentPage = (oldCurrentPage > pagesCount) ? this._currentPageNumber : oldCurrentPage;
     const firstPagePromise = pdfDocument.getPage(1);
-    const currentPagePromise = pdfDocument.getPage(oldCurrentPage);
     const optionalContentConfigPromise = pdfDocument.getOptionalContentConfig({
       intent: "display"
     });
@@ -11840,7 +11836,10 @@ class PDFViewer {
       this._onAfterDraw = null;
     };
     this.eventBus._on("pagerendered", this._onAfterDraw);
-    Promise.all([firstPagePromise, currentPagePromise, permissionsPromise]).then(([firstPdfPage, currentPage, permissions]) => {
+    oldCanvasArr = oldCanvasArr.filter(([pageNum, canvas]) => pageNum <= pagesCount); // only keep canvases for pages that are still in the document
+    const oldCanvasMap = new Map(oldCanvasArr); // convert the array of arrays into a map
+    const visiblePagePromises = Promise.all(oldCanvasArr.map(([pageNum, canvas]) => pdfDocument.getPage(pageNum).then(pdfPage => [pageNum, pdfPage]))).then(res => new Map(res)); // create a Promise[Maps[pageNum, pdfPage]] to be used to rendered visible pages
+    Promise.all([firstPagePromise, permissionsPromise, visiblePagePromises]).then(([firstPdfPage, permissions, visiblePages]) => {
       if (pdfDocument !== this.pdfDocument) {
         return;
       }
@@ -11903,9 +11902,11 @@ class PDFViewer {
         this._pages.push(pageView);
       }
       this._pages[0]?.setPdfPage(firstPdfPage);
-      this._pages[oldCurrentPage-1]?.setPdfPage(currentPage);
-      this.renderingQueue.renderView(this._pages[oldCurrentPage-1], oldPageCanvas);
-      for (let i = 1; i <= oldPageNum; i++)
+      visiblePages.forEach((pdfPage, pageNum) => {
+        this._pages[pageNum - 1]?.setPdfPage(pdfPage);
+        this._pages[pageNum - 1]?.draw(oldCanvasMap.get(pageNum));
+      });
+      for (let i = 1; i <= oldPageCount; i++)
         this.viewer.removeChild(this.viewer.firstChild);
       if (this._scrollMode === _ui_utils_js__WEBPACK_IMPORTED_MODULE_1__.ScrollMode.PAGE) {
         this.#ensurePageViewVisible();
