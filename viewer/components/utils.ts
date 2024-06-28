@@ -5,12 +5,12 @@ export async function sleep(timeout: number) {
 }
 
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
-    var binaryString = atob(base64);
-    var bytes = new Uint8Array(binaryString.length);
-    for (var i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+    let binaryString = atob(base64)
+    let bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
     }
-    return bytes.buffer;
+    return bytes.buffer
 }
 
 // We use base64url to encode the path of PDF file.

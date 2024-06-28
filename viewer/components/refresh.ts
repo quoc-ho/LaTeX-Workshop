@@ -38,7 +38,7 @@ export function doneRefresh() {
 let refreshing = false
 let shouldRefreshAgain = false
 let doneRefreshTimeout = 0
-export async function refresh() {    
+export async function refresh() {
     if (!IsAutoRefreshEnabled()) {
         sendLog('Auto reload temporarily disabled.')
         return
