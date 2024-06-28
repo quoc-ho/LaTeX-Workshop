@@ -2542,6 +2542,9 @@
             "filenamePattern": "*.pdf"
           },
           {
+            "filenamePattern": "*.pdf.base64"
+          },
+          {
             "filenamePattern": "*.PDF"
           }
         ],

@@ -38,7 +38,7 @@ export function doneRefresh() {
 let refreshing = false
 let shouldRefreshAgain = false
 let doneRefreshTimeout = 0
-export async function refresh() {
+export async function refresh() {    
     if (!IsAutoRefreshEnabled()) {
         sendLog('Auto reload temporarily disabled.')
         return
@@ -75,11 +75,19 @@ export async function refresh() {
 
     const { encodedPath, docTitle } = utils.parseURL()
     /* eslint-disable */
-    const doc = await pdfjsLib.getDocument({
-        url: `/${utils.pdfFilePrefix}${encodedPath}`,
-        cMapUrl: '../cmaps/'
-    }).promise
-    PDFViewerApplication.load(doc)
+    if (utils.parseURL().pdfFileUri.endsWith("pdf.base64"))
+        await fetch(`/${utils.pdfFilePrefix}${encodedPath}`)
+            .then(res => res.text())
+            .then(t => utils.base64ToArrayBuffer(t))
+            .then(buf => pdfjsLib.getDocument(buf).promise)
+            .then(doc => PDFViewerApplication.load(doc))
+    else {
+        const doc = await pdfjsLib.getDocument({
+            url: `/${utils.pdfFilePrefix}${encodedPath}`,
+            cMapUrl: '../cmaps/'
+        }).promise
+        PDFViewerApplication.load(doc)
+    }
     /* eslint-enable */
     // reset the document title to the original value to avoid duplication
     document.title = docTitle

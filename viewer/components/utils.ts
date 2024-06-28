@@ -4,6 +4,15 @@ export async function sleep(timeout: number) {
     await new Promise((resolve) => setTimeout(resolve, timeout))
 }
 
+export function base64ToArrayBuffer(base64: string): ArrayBuffer {
+    var binaryString = atob(base64);
+    var bytes = new Uint8Array(binaryString.length);
+    for (var i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
 // We use base64url to encode the path of PDF file.
 // https://github.com/James-Yu/LaTeX-Workshop/pull/1501
 export function encodePath(path: string): string {
