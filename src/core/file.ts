@@ -14,6 +14,7 @@ export const file = {
     getJobname,
     getBibPath,
     getPdfPath,
+    getPdfBase64Path,
     getFlsPath,
     hasBinaryExt,
     hasTeXExt,
@@ -309,6 +310,13 @@ function getJobname(texPath: string): string {
  */
 function getPdfPath(texPath: string): string {
     return path.resolve(path.dirname(texPath), getOutDir(texPath), path.basename(`${getJobname(texPath)}.pdf`))
+}
+
+/**
+ * Same as getPdfPath but with a `.base64` extension.
+ */
+function getPdfBase64Path(texPath: string): string {
+    return path.resolve(path.dirname(texPath), getOutDir(texPath), path.basename(`${getJobname(texPath)}.pdf.base64`))
 }
 
 /**

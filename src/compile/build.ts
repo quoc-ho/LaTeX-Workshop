@@ -420,7 +420,13 @@ async function afterSuccessfulBuilt(lastStep: Step, skipped: boolean) {
     if (!lastStep.isExternal && skipped) {
         return
     }
-    lw.viewer.refresh(lw.file.getPdfPath(lastStep.rootFile))
+    const rootFile = lastStep.rootFile
+    lw.viewer.refresh(lw.file.getPdfPath(rootFile))
+    await vscode.workspace.fs.readFile(vscode.Uri.file(lw.file.getPdfPath(lastStep.rootFile)))
+        .then(data => Buffer.from(data).toString('base64'))
+        .then(base64Data => vscode.workspace.fs.writeFile(vscode.Uri.file(lw.file.getPdfBase64Path(rootFile)), Buffer.from(base64Data)))
+        .then(() => lw.viewer.refresh(lw.file.getPdfBase64Path(rootFile)))
+
     lw.completion.reference.setNumbersFromAuxFile(lastStep.rootFile)
     await lw.cache.loadFlsFile(lastStep.rootFile ?? '')
     const configuration = vscode.workspace.getConfiguration('latex-workshop', vscode.Uri.file(lastStep.rootFile))
