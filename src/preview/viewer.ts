@@ -29,6 +29,7 @@ export { serializer } from './viewer/pdfviewerpanel'
 export { hook } from './viewer/pdfviewerhook'
 
 lw.watcher.pdf.onChange(pdfPath => {
+    refresh(`${pdfPath}.base64`)
     if (lw.compile.compiledPDFWriting === 0 || path.relative(lw.compile.compiledPDFPath, pdfPath) !== '') {
         refresh(pdfPath)
     }

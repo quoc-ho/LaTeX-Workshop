@@ -423,9 +423,13 @@ async function afterSuccessfulBuilt(lastStep: Step, skipped: boolean) {
     const rootFile = lastStep.rootFile
     lw.viewer.refresh(lw.file.getPdfPath(rootFile))
     await vscode.workspace.fs.readFile(vscode.Uri.file(lw.file.getPdfPath(lastStep.rootFile)))
-        .then(data => Buffer.from(data).toString('base64'))
-        .then(base64Data => vscode.workspace.fs.writeFile(vscode.Uri.file(lw.file.getPdfBase64Path(rootFile)), Buffer.from(base64Data)))
-        .then(() => lw.viewer.refresh(lw.file.getPdfBase64Path(rootFile)))
+        .then(async data => {
+            const base64Data = Buffer.from(data).toString('base64')
+            const file = vscode.Uri.file(lw.file.getPdfBase64Path(rootFile))
+            await vscode.workspace.fs.delete(file) // to make sure that live share works more reliably
+            await vscode.workspace.fs.writeFile(file, Buffer.from(base64Data))
+            lw.viewer.refresh(lw.file.getPdfBase64Path(rootFile)) // this is faster than file watch
+        })
 
     lw.completion.reference.setNumbersFromAuxFile(lastStep.rootFile)
     await lw.cache.loadFlsFile(lastStep.rootFile ?? '')
