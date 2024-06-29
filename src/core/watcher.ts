@@ -299,6 +299,7 @@ class Watcher {
 export const watcher = {
     src: new Watcher(),
     pdf: new Watcher('.pdf'),
+    pdfForGuests: new Watcher('.pdf'),
     pdfbase64: new Watcher('.pdf.base64'),
     bib: new Watcher('.bib')
 }

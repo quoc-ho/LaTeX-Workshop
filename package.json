@@ -1,10 +1,10 @@
 {
-  "name": "latex-workshop",
+  "name": "vscode-test-explorer-liveshare",
   "displayName": "LaTeX Workshop",
   "description": "Boost LaTeX typesetting efficiency with preview, compile, autocomplete, colorize, and more.",
   "icon": "icons/icon.png",
   "version": "10.1.0",
-  "publisher": "James-Yu",
+  "publisher": "hbenl",
   "license": "MIT",
   "homepage": "https://github.com/James-Yu/LaTeX-Workshop",
   "repository": {
@@ -2573,6 +2573,7 @@
     "micromatch": "4.0.5",
     "pdfjs-dist": "4.3.136",
     "tmp": "0.2.3",
+    "vsls": "^1.0.4753",
     "workerpool": "9.1.1",
     "ws": "8.17.1"
   },
