@@ -46,7 +46,7 @@ class Watcher {
      *
      * @param {'.*' | '.bib' | '.pdf'} [fileExt='.*'] - The file extension to watch.
      */
-    constructor(readonly fileExt: '.*' | '.bib' | '.pdf' = '.*') {}
+    constructor(readonly fileExt: '.*' | '.bib' | '.pdf' | '.pdf.base64' = '.*') {}
 
     /**
      * Adds a handler for file creation events.
@@ -299,5 +299,6 @@ class Watcher {
 export const watcher = {
     src: new Watcher(),
     pdf: new Watcher('.pdf'),
+    pdfbase64: new Watcher('.pdf.base64'),
     bib: new Watcher('.bib')
 }

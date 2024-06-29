@@ -29,11 +29,16 @@ export { serializer } from './viewer/pdfviewerpanel'
 export { hook } from './viewer/pdfviewerhook'
 
 lw.watcher.pdf.onChange(pdfPath => {
-    refresh(`${pdfPath}.base64`)
     if (lw.compile.compiledPDFWriting === 0 || path.relative(lw.compile.compiledPDFPath, pdfPath) !== '') {
         refresh(pdfPath)
     }
 })
+lw.watcher.pdfbase64.onChange(pdfbase64Path => {
+    if (lw.compile.compiledPDFWriting === 0 || path.relative(`${lw.compile.compiledPDFPath}.base64`, pdfbase64Path) !== '') {
+        refresh(pdfbase64Path)
+    }
+})
+
 lw.onConfigChange(['view.pdf.invert', 'view.pdf.invertMode', 'view.pdf.color', 'view.pdf.internal'], () => {
     reload()
 })

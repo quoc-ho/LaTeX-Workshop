@@ -426,7 +426,7 @@ async function afterSuccessfulBuilt(lastStep: Step, skipped: boolean) {
         .then(async data => {
             const base64Data = Buffer.from(data).toString('base64')
             const file = vscode.Uri.file(lw.file.getPdfBase64Path(rootFile))
-            await vscode.workspace.fs.delete(file) // to make sure that live share works more reliably
+            void vscode.workspace.fs.delete(file) // to make sure that live share works more reliably
             await vscode.workspace.fs.writeFile(file, Buffer.from(base64Data))
             lw.viewer.refresh(lw.file.getPdfBase64Path(rootFile)) // this is faster than file watch
         })
